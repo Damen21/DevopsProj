@@ -1,0 +1,43 @@
+@model IEnumerable<Predobro.Models.Item>
+@{
+    ViewData["Title"] = "My Store";
+}
+
+<h2>Store Dashboard</h2>
+<p>
+    Welcome, Store! Here you can manage your items.
+</p>
+
+<a asp-action="Create" class="btn btn-primary mb-3">Add New Item</a>
+
+@if (!Model.Any())
+{
+    <p>You have not listed any items yet.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Name</td>
+                <td>@item.Description</td>
+                <td>@item.Price.ToString("C")</td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Edit</a>
+                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger btn-sm">Delete</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

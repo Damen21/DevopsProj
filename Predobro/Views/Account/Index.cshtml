@@ -1,0 +1,82 @@
+@model IEnumerable<Predobro.Models.Order>
+@{
+    ViewData["Title"] = "My Account";
+    var user = ViewBag.User as Predobro.Models.ApplicationUser;
+}
+
+<h2>My Account</h2>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h4 class="card-title">@user.FullName</h4>
+        <p class="card-text"><strong>Email:</strong> @user.Email</p>
+        <p class="card-text"><strong>Address:</strong> @user.Address</p>
+        <p class="card-text"><strong>Phone:</strong> @user.PhoneNumber</p>
+    </div>
+</div>
+
+<h3>My Orders</h3>
+@if (!Model.Any())
+{
+    <p>You have no orders yet.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Date</th>
+                <th>Items</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var order in Model)
+        {
+            <tr>
+                <td>@order.Id</td>
+                <td>@order.CreatedAt.ToString("g")</td>
+                <td>
+                    @foreach (var item in order.OrderItems)
+                    {
+                        <div>@item.Item.Name (x@item.Quantity)</div>
+                    }
+                </td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id" 
+                           class="btn btn-info btn-sm">Details</a>
+                        <button type="button" class="btn btn-danger btn-sm" 
+                                data-bs-toggle="modal" data-bs-target="#deleteModal@(order.Id)">
+                            Delete
+                        </button>
+                    </div>
+                    
+                    <!-- Delete Confirmation Modal -->
+                    <div class="modal fade" id="deleteModal@(order.Id)" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Confirm Deletion</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Are you sure you want to delete Order #@order.Id?</p>
+                                    <p><strong>This action cannot be undone.</strong></p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <form asp-controller="Order" asp-action="Delete" asp-route-id="@order.Id" method="post">
+                                        <button type="submit" class="btn btn-danger">Delete Order</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

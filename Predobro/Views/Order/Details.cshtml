@@ -1,0 +1,32 @@
+@model Predobro.Models.Order
+
+@{
+    ViewData["Title"] = "Order Details";
+}
+
+<h2>Order #@Model.Id Details</h2>
+<p>Date: @Model.CreatedAt.ToString("g")</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Item</th>
+            <th>Description</th>
+            <th>Quantity</th>
+            <th>Price</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.OrderItems)
+    {
+        <tr>
+            <td>@item.Item.Name</td>
+            <td>@item.Item.Description</td>
+            <td>@item.Quantity</td>
+            <td>@item.Item.Price.ToString("C")</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<a asp-action="Index" class="btn btn-secondary">Back to Orders</a>

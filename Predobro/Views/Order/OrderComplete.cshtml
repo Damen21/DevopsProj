@@ -1,0 +1,51 @@
+@model Predobro.Models.Order
+@{
+    ViewData["Title"] = "Order Complete";
+}
+
+<div class="text-center mb-4">
+    <h2>Thank You for Your Order!</h2>
+    <p>Your order has been placed successfully.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Order #@Model.Id</h5>
+        <p class="text-muted mb-0">Placed on @Model.SubmittedAt?.ToString("MMMM dd, yyyy at h:mm tt")</p>
+    </div>
+    <div class="card-body">
+        <h6>Order Items:</h6>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.OrderItems)
+                {
+                    <tr>
+                        <td>@item.Item.Name</td>
+                        <td>@item.Item.Price.ToString("C")</td>
+                        <td>@item.Quantity</td>
+                        <td>@((item.Item.Price * item.Quantity).ToString("C"))</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="3">Total:</th>
+                    <th>@Model.OrderItems.Sum(oi => oi.Item.Price * oi.Quantity).ToString("C")</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Continue Shopping</a>
+    <a asp-action="Index" class="btn btn-outline-secondary">View All Orders</a>
+</div>
