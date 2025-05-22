@@ -23,14 +23,38 @@ public class AccountController : BaseController
     public async Task<IActionResult> Index()
     {
         var user = await _userManager.GetUserAsync(User);
-        var orders = await _context.Orders
-            .Where(o => o.CustomerId == user.Id)
-            .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Item)
-            .OrderByDescending(o => o.CreatedAt)
-            .ToListAsync();
-
         ViewBag.User = user;
+        
+        IEnumerable<Order> orders;
+        
+        if (User.IsInRole("Customer"))
+        {
+            // Load customer's orders
+            orders = await _context.Orders
+                .Where(o => o.CustomerId == user.Id && o.IsSubmitted)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Item)
+                .OrderByDescending(o => o.SubmittedAt)
+                .ToListAsync();
+        }
+        else if (User.IsInRole("Store"))
+        {
+            // Load orders containing this store's items
+            orders = await _context.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Item)
+                .Include(o => o.Customer)
+                .Where(o => o.OrderItems.Any(oi => oi.Item.StoreId == user.Id))
+                .OrderByDescending(o => o.CreatedAt)
+                .ToListAsync();
+                
+            ViewBag.CurrentUserId = user.Id;
+        }
+        else
+        {
+            orders = new List<Order>();
+        }
+        
         return View(orders);
     }
 }

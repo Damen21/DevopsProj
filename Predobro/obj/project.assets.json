@@ -8043,19 +8043,19 @@
     ]
   },
   "packageFolders": {
-    "/Users/gregorvidrih/.nuget/packages/": {}
+    "/Users/damen21/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/gregorvidrih/Documents/RIStogood copy/Predobro/Predobro.csproj",
+      "projectUniqueName": "/Users/damen21/Desktop/RIS/risnaloga/Predobro/Predobro.csproj",
       "projectName": "Predobro",
-      "projectPath": "/Users/gregorvidrih/Documents/RIStogood copy/Predobro/Predobro.csproj",
-      "packagesPath": "/Users/gregorvidrih/.nuget/packages/",
-      "outputPath": "/Users/gregorvidrih/Documents/RIStogood copy/Predobro/obj/",
+      "projectPath": "/Users/damen21/Desktop/RIS/risnaloga/Predobro/Predobro.csproj",
+      "packagesPath": "/Users/damen21/.nuget/packages/",
+      "outputPath": "/Users/damen21/Desktop/RIS/risnaloga/Predobro/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/Users/gregorvidrih/.nuget/NuGet/NuGet.Config"
+        "/Users/damen21/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"

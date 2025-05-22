@@ -271,4 +271,22 @@ public async Task<IActionResult> DeleteConfirmed(int id)
     await _context.SaveChangesAsync();
     return RedirectToAction(nameof(Index));
 }
+
+// GET: Store orders containing this store's items
+public async Task<IActionResult> Orders()
+{
+    var user = await _userManager.GetUserAsync(User);
+    
+    // Get all orders that contain items from this store
+    var orders = await _context.Orders
+        .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.Item)
+        .Include(o => o.Customer)
+        .Where(o => o.OrderItems.Any(oi => oi.Item.StoreId == user.Id))
+        .OrderByDescending(o => o.CreatedAt)
+        .ToListAsync();
+
+    ViewBag.CurrentUserId = user.Id;
+    return View(orders);
+}
 }
