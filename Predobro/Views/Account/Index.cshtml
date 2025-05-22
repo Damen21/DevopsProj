@@ -15,6 +15,14 @@
     </div>
 </div>
 
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Message"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 @if (User.IsInRole("Customer"))
 {
     <h3>My Orders</h3>
@@ -24,132 +32,184 @@
     }
     else
     {
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Order #</th>
-                    <th>Date</th>
-                    <th>Items</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var order in Model)
-            {
-                <tr>
-                    <td>@order.Id</td>
-                    <td>@order.CreatedAt.ToString("g")</td>
-                    <td>
-                        @foreach (var item in order.OrderItems)
-                        {
-                            <div>@item.Item.Name (x@item.Quantity)</div>
-                        }
-                    </td>
-                    <td>
-                        <div class="btn-group" role="group">
-                            <a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id" 
-                               class="btn btn-info btn-sm">Details</a>
-                            <button type="button" class="btn btn-danger btn-sm" 
-                                    data-bs-toggle="modal" data-bs-target="#deleteModal@(order.Id)">
-                                Delete
-                            </button>
-                        </div>
+        <div class="row">
+        @foreach (var order in Model)
+        {
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Order #@order.Id</h5>
+                        <span class="badge @(order.OverallStatus == OrderItemStatus.Completed ? "bg-success" : 
+                                            order.OverallStatus == OrderItemStatus.ReadyForPickup ? "bg-info" : "bg-warning")">
+                            @order.OverallStatus
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text"><strong>Date:</strong> @order.SubmittedAt?.ToString("g")</p>
                         
-                        <!-- Delete Confirmation Modal -->
-                        <div class="modal fade" id="deleteModal@(order.Id)" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Confirm Deletion</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h6>Items:</h6>
+                        @foreach (var groupByStore in order.OrderItems.GroupBy(oi => oi.Item.Store))
+                        {
+                            <div class="mb-3">
+                                <strong>@groupByStore.Key.FullName:</strong>
+                                @foreach (var item in groupByStore)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center border-bottom py-1">
+                                        <div>
+                                            <span>@item.Item.Name (x@item.Quantity)</span>
+                                        </div>
+                                        <div>
+                                            <span class="badge @(item.Status == OrderItemStatus.Completed ? "bg-success" : 
+                                                                item.Status == OrderItemStatus.ReadyForPickup ? "bg-info" : "bg-warning") me-2">
+                                                @item.Status
+                                            </span>
+                                            <span class="text-muted">@((item.Item.Price * item.Quantity).ToString("C"))</span>
+                                        </div>
                                     </div>
-                                    <div class="modal-body">
-                                        <p>Are you sure you want to delete Order #@order.Id?</p>
-                                        <p><strong>This action cannot be undone.</strong></p>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <form asp-controller="Order" asp-action="Delete" asp-route-id="@order.Id" method="post">
-                                            <button type="submit" class="btn btn-danger">Delete Order</button>
-                                        </form>
-                                    </div>
+                                }
+                            </div>
+                        }
+                        
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <strong>Total: @order.OrderItems.Sum(oi => oi.Item.Price * oi.Quantity).ToString("C")</strong>
+                            <div>
+                                <a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id" 
+                                   class="btn btn-info btn-sm">Details</a>
+                                @if (order.OverallStatus == OrderItemStatus.Completed)
+                                {
+                                    <button type="button" class="btn btn-danger btn-sm" 
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal@(order.Id)">
+                                        Delete
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                @if (order.OverallStatus == OrderItemStatus.Completed)
+                {
+                    <!-- Delete Confirmation Modal -->
+                    <div class="modal fade" id="deleteModal@(order.Id)" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Confirm Deletion</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Are you sure you want to delete Order #@order.Id?</p>
+                                    <p><strong>This action cannot be undone.</strong></p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <form asp-controller="Order" asp-action="Delete" asp-route-id="@order.Id" method="post">
+                                        <button type="submit" class="btn btn-danger">Delete Order</button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
+                    </div>
+                }
+            </div>
+        }
+        </div>
     }
 }
 else if (User.IsInRole("Store"))
 {
     <h3>Orders Containing My Items</h3>
+    
     @if (!Model.Any())
     {
         <div class="alert alert-info">
-            <p>No orders contain your items yet.</p>
+            <p>No active orders contain your items.</p>
         </div>
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Order #</th>
-                        <th>Customer</th>
-                        <th>Date</th>
-                        <th>My Items</th>
-                        <th>Total for My Items</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach (var order in Model)
-                {
-                    var myItems = order.OrderItems.Where(oi => oi.Item.StoreId == ViewBag.CurrentUserId).ToList();
-                    var totalForMyItems = myItems.Sum(oi => oi.Item.Price * oi.Quantity);
-                    
-                    <tr>
-                        <td>#@order.Id</td>
-                        <td>
-                            <div><strong>@order.Customer.FullName</strong></div>
-                            <small class="text-muted">@order.Customer.Email</small>
-                        </td>
-                        <td>@order.CreatedAt.ToString("g")</td>
-                        <td>
+        <div class="row">
+        @foreach (var order in Model)
+        {
+            var myItems = order.OrderItems.Where(oi => oi.Item.StoreId == ViewBag.CurrentUserId && oi.Status != OrderItemStatus.Completed).ToList();
+            
+            if (myItems.Any())
+            {
+                <div class="col-lg-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Order #@order.Id</h5>
+                            <small class="text-muted">
+                                Customer: @order.Customer.FullName (@order.Customer.Email)<br>
+                                Date: @order.SubmittedAt?.ToString("g")
+                            </small>
+                        </div>
+                        <div class="card-body">
                             @foreach (var item in myItems)
                             {
-                                <div class="mb-1">
-                                    <strong>@item.Item.Name</strong><br>
-                                    <small class="text-muted">
-                                        Qty: @item.Quantity × $@item.Item.Price.ToString("F2") = $@((item.Item.Price * item.Quantity).ToString("F2"))
-                                    </small>
+                                <div class="border rounded p-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <h6 class="mb-1">@item.Item.Name</h6>
+                                            <small class="text-muted">
+                                                Qty: @item.Quantity × $@item.Item.Price.ToString("F2") = $@((item.Item.Price * item.Quantity).ToString("F2"))
+                                            </small>
+                                        </div>
+                                        <span class="badge @(item.Status == OrderItemStatus.Completed ? "bg-success" : 
+                                                            item.Status == OrderItemStatus.ReadyForPickup ? "bg-info" : "bg-warning")">
+                                            @item.Status
+                                        </span>
+                                    </div>
+                                    
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        @if (item.Status == OrderItemStatus.Processing)
+                                        {
+                                            <form asp-action="UpdateOrderItemStatus" method="post" class="d-inline">
+                                                <input type="hidden" name="orderItemId" value="@item.Id" />
+                                                <input type="hidden" name="status" value="@((int)OrderItemStatus.ReadyForPickup)" />
+                                                <button type="submit" class="btn btn-info">Mark Ready</button>
+                                            </form>
+                                        }
+                                        
+                                        @if (item.Status == OrderItemStatus.ReadyForPickup)
+                                        {
+                                            <form asp-action="UpdateOrderItemStatus" method="post" class="d-inline">
+                                                <input type="hidden" name="orderItemId" value="@item.Id" />
+                                                <input type="hidden" name="status" value="@((int)OrderItemStatus.Completed)" />
+                                                <button type="submit" class="btn btn-success">Mark Completed</button>
+                                            </form>
+                                        }
+                                    </div>
                                 </div>
                             }
-                        </td>
-                        <td>
-                            <strong>$@totalForMyItems.ToString("F2")</strong>
-                        </td>
-                        <td>
-                            <a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id" 
-                               class="btn btn-info btn-sm">View Details</a>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
+                            
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <strong>Your items total:</strong> $@myItems.Sum(oi => oi.Item.Price * oi.Quantity).ToString("F2")
+                                </small>
+                                <div class="mt-2">
+                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id" 
+                                       class="btn btn-outline-primary btn-sm">View Full Order</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
         </div>
         
         <div class="mt-3">
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Summary</h5>
+                    @{
+                        var allMyActiveItems = Model.SelectMany(o => o.OrderItems.Where(oi => oi.Item.StoreId == ViewBag.CurrentUserId && oi.Status != OrderItemStatus.Completed)).ToList();
+                        var totalRevenue = allMyActiveItems.Sum(oi => oi.Item.Price * oi.Quantity);
+                    }
                     <p class="card-text">
-                        <strong>Total Orders:</strong> @Model.Count()<br>
-                        <strong>Total Revenue:</strong> $@Model.SelectMany(o => o.OrderItems.Where(oi => oi.Item.StoreId == ViewBag.CurrentUserId)).Sum(oi => oi.Item.Price * oi.Quantity).ToString("F2")
+                        <strong>Active Items:</strong> @allMyActiveItems.Count<br>
+                        <strong>Total Revenue (Active):</strong> $@totalRevenue.ToString("F2")
                     </p>
                 </div>
             </div>

@@ -34,17 +34,20 @@ public class AccountController : BaseController
                 .Where(o => o.CustomerId == user.Id && o.IsSubmitted)
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Item)
+                    .ThenInclude(i => i.Store)
                 .OrderByDescending(o => o.SubmittedAt)
                 .ToListAsync();
         }
         else if (User.IsInRole("Store"))
         {
-            // Load orders containing this store's items
+            // Load orders containing this store's items (exclude orders where all this store's items are completed)
             orders = await _context.Orders
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Item)
                 .Include(o => o.Customer)
-                .Where(o => o.OrderItems.Any(oi => oi.Item.StoreId == user.Id))
+                .Where(o => o.OrderItems.Any(oi => oi.Item.StoreId == user.Id) && 
+                           o.IsSubmitted && 
+                           o.OrderItems.Any(oi => oi.Item.StoreId == user.Id && oi.Status != OrderItemStatus.Completed))
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
                 
@@ -56,5 +59,35 @@ public class AccountController : BaseController
         }
         
         return View(orders);
+    }
+
+    // Update to handle individual order item status
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateOrderItemStatus(int orderItemId, OrderItemStatus status)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        
+        // Only allow stores to update order status
+        if (!User.IsInRole("Store"))
+            return Forbid();
+        
+        // Find the order item and verify it belongs to this store
+        var orderItem = await _context.OrderItems
+            .Include(oi => oi.Item)
+            .Include(oi => oi.Order)
+            .FirstOrDefaultAsync(oi => oi.Id == orderItemId && 
+                                oi.Item.StoreId == user.Id &&
+                                oi.Order.IsSubmitted);
+        
+        if (orderItem == null)
+            return NotFound();
+        
+        // Update the status
+        orderItem.Status = status;
+        await _context.SaveChangesAsync();
+        
+        TempData["Message"] = $"Item '{orderItem.Item.Name}' in Order #{orderItem.OrderId} status updated to {status}";
+        return RedirectToAction(nameof(Index));
     }
 }

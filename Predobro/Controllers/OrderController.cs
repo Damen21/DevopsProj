@@ -27,11 +27,12 @@ public class OrderController : BaseController
     {
         var user = await _userManager.GetUserAsync(User);
         var orders = await _context.Orders
-            .Where(o => o.CustomerId == user.Id && o.IsSubmitted)  // Only submitted orders
+            .Where(o => o.CustomerId == user.Id && o.IsSubmitted)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Item)
-            .OrderByDescending(o => o.SubmittedAt)  // Sort by submission date
+            .OrderByDescending(o => o.SubmittedAt)
             .ToListAsync();
+        
         return View(orders);
     }
 
@@ -42,11 +43,12 @@ public class OrderController : BaseController
         var order = await _context.Orders
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Item)
-            .FirstOrDefaultAsync(o => o.Id == id && o.CustomerId == user.Id);
-
+                .ThenInclude(i => i.Store)
+            .FirstOrDefaultAsync(o => o.Id == id && o.CustomerId == user.Id && o.IsSubmitted);
+    
         if (order == null)
             return NotFound();
-
+    
         return View(order);
     }
 

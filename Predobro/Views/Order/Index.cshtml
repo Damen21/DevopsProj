@@ -18,6 +18,7 @@ else
                 <tr>
                     <th>Order #</th>
                     <th>Date</th>
+                    <th>Status</th>
                     <th>Items</th>
                     <th>Total</th>
                     <th>Actions</th>
@@ -29,39 +30,59 @@ else
                     <tr>
                         <td>@order.Id</td>
                         <td>@order.SubmittedAt?.ToString("MM/dd/yyyy HH:mm")</td>
+                        <td>
+                            @switch (order.OverallStatus)
+                            {
+                                case OrderItemStatus.Processing:
+                                    <span class="badge bg-warning">Processing</span>
+                                    break;
+                                case OrderItemStatus.ReadyForPickup:
+                                    <span class="badge bg-info">Ready for Pickup</span>
+                                    break;
+                                case OrderItemStatus.Completed:
+                                    <span class="badge bg-success">Completed</span>
+                                    break;
+                            }
+                        </td>
                         <td>@order.OrderItems.Sum(oi => oi.Quantity) items</td>
                         <td>@order.OrderItems.Sum(oi => oi.Item.Price * oi.Quantity).ToString("C")</td>
                         <td>
                             <div class="btn-group" role="group">
                                 <a asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-info">Details</a>
-                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" 
-                                        data-bs-target="#deleteModal@(order.Id)">
-                                    Cancel Order
-                                </button>
+                                @if (order.OverallStatus == OrderItemStatus.Completed)
+                                {
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal@(order.Id)">
+                                        Delete Order
+                                    </button>
+                                }
                             </div>
                             
-                            <!-- Delete Confirmation Modal -->
-                            <div class="modal fade" id="deleteModal@(order.Id)" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Confirm Order Cancellation</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p>Are you sure you want to cancel Order #@order.Id?</p>
-                                            <p><strong>This action cannot be undone.</strong></p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Order</button>
-                                            <form asp-action="Delete" asp-route-id="@order.Id" method="post">
-                                                @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-danger">Cancel Order</button>
-                                            </form>
+                            @if (order.OverallStatus == OrderItemStatus.Completed)
+                            {
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade" id="deleteModal@(order.Id)" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Confirm Order Deletion</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Are you sure you want to delete Order #@order.Id?</p>
+                                                <p><strong>This action cannot be undone.</strong></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Order</button>
+                                                <form asp-action="Delete" asp-route-id="@order.Id" method="post">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-danger">Delete Order</button>
+                                                </form>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            }
                         </td>
                     </tr>
                 }

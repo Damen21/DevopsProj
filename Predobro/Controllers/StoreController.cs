@@ -47,246 +47,232 @@ public class StoreController : BaseController
 
     // POST: Create new item
     // Explicitly include ONLY the fields we want to bind from form
-    
-    
+
+
     // Add these methods to your existing StoreController
 
-// GET: Store/Edit/5
-public async Task<IActionResult> Edit(int id)
-{
-    var user = await _userManager.GetUserAsync(User);
-    var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.StoreId == user.Id);
-    
-    if (item == null)
+    // GET: Store/Edit/5
+    public async Task<IActionResult> Edit(int id)
     {
-        return NotFound();
-    }
-    
-    return View(item);
-}
+        var user = await _userManager.GetUserAsync(User);
+        var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.StoreId == user.Id);
 
-// Update the Create action to handle image upload
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> Create([Bind("Name,Description,Price,Quantity")] Item item, IFormFile ImageFile)
-{
-    Console.WriteLine("POST Create called");
-
-    var user = await _userManager.GetUserAsync(User);
-
-    // Remove the validation errors for StoreId and Store
-    ModelState.Remove("StoreId");
-    ModelState.Remove("Store");
-
-    if (ModelState.IsValid)
-    {
-        try
+        if (item == null)
         {
-            // Set these fields after validation
-            item.StoreId = user.Id;
+            return NotFound();
+        }
 
-            // Handle image upload if provided
-            if (ImageFile != null && ImageFile.Length > 0)
+        return View(item);
+    }
+
+    // Update the Create action to handle image upload
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create([Bind("Name,Description,Price,Quantity")] Item item, IFormFile ImageFile)
+    {
+        Console.WriteLine("POST Create called");
+
+        var user = await _userManager.GetUserAsync(User);
+
+        // Remove the validation errors for StoreId and Store
+        ModelState.Remove("StoreId");
+        ModelState.Remove("Store");
+
+        if (ModelState.IsValid)
+        {
+            try
             {
-                // Create a unique filename
-                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(ImageFile.FileName);
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "items", fileName);
-                
-                // Ensure directory exists
-                var directory = Path.GetDirectoryName(filePath);
-                if (!Directory.Exists(directory))
+                // Set these fields after validation
+                item.StoreId = user.Id;
+
+                // Handle image upload if provided
+                if (ImageFile != null && ImageFile.Length > 0)
                 {
-                    Directory.CreateDirectory(directory);
+                    // Create a unique filename
+                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(ImageFile.FileName);
+                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "items", fileName);
+
+                    // Ensure directory exists
+                    var directory = Path.GetDirectoryName(filePath);
+                    if (!Directory.Exists(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+
+                    // Save the file
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await ImageFile.CopyToAsync(stream);
+                    }
+
+                    // Store the relative URL
+                    item.ImageUrl = "/uploads/items/" + fileName;
                 }
-                
-                // Save the file
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await ImageFile.CopyToAsync(stream);
-                }
-                
-                // Store the relative URL
-                item.ImageUrl = "/uploads/items/" + fileName;
+
+                // DEBUG: Print item details to console
+                Console.WriteLine($"Adding item: {item.Name}, Price: {item.Price}, StoreId: {item.StoreId}");
+
+                _context.Items.Add(item);
+                var result = await _context.SaveChangesAsync();
+
+                Console.WriteLine($"SaveChanges result: {result} records affected");
+                return RedirectToAction(nameof(Index));
             }
-
-            // DEBUG: Print item details to console
-            Console.WriteLine($"Adding item: {item.Name}, Price: {item.Price}, StoreId: {item.StoreId}");
-            
-            _context.Items.Add(item);
-            var result = await _context.SaveChangesAsync();
-            
-            Console.WriteLine($"SaveChanges result: {result} records affected");
-            return RedirectToAction(nameof(Index));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("Exception: " + ex.Message);
-            ModelState.AddModelError("", "Error saving item: " + ex.Message);
-            // Return the view with the error
-            return View(item);
-        }
-    }
-    else
-    {
-        Console.WriteLine("ModelState is invalid:");
-        foreach (var state in ModelState)
-        {
-            foreach (var error in state.Value.Errors)
+            catch (Exception ex)
             {
-                Console.WriteLine($"- {state.Key}: {error.ErrorMessage}");
+                Console.WriteLine("Exception: " + ex.Message);
+                ModelState.AddModelError("", "Error saving item: " + ex.Message);
+                // Return the view with the error
+                return View(item);
             }
         }
-    }
-    
-    // If we get here, something went wrong, redisplay the form
-    return View(item);
-}
-
-// Update the Edit action to handle image upload/deletion
-[HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,Price,Quantity,ImageUrl")] Item item, 
-    IFormFile ImageFile, bool DeleteImage = false)
-{
-    if (id != item.Id)
-    {
-        return NotFound();
-    }
-
-    var user = await _userManager.GetUserAsync(User);
-    
-    // Make sure the item belongs to this store
-    var originalItem = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.StoreId == user.Id);
-    if (originalItem == null)
-    {
-        return NotFound();
-    }
-
-    // Remove validation errors for StoreId and Store
-    ModelState.Remove("StoreId");
-    ModelState.Remove("Store");
-    
-    if (ModelState.IsValid)
-    {
-        try
+        else
         {
-            // Preserve the StoreId (don't let it be changed)
-            item.StoreId = originalItem.StoreId;
-            
-            // Handle image changes
-            if (DeleteImage && !string.IsNullOrEmpty(originalItem.ImageUrl))
+            Console.WriteLine("ModelState is invalid:");
+            foreach (var state in ModelState)
             {
-                // Delete the physical file if it exists
-                var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", 
-                    originalItem.ImageUrl.TrimStart('/'));
-                if (System.IO.File.Exists(oldFilePath))
+                foreach (var error in state.Value.Errors)
                 {
-                    System.IO.File.Delete(oldFilePath);
+                    Console.WriteLine($"- {state.Key}: {error.ErrorMessage}");
                 }
-                
-                // Clear the URL
-                item.ImageUrl = null;
             }
-            else if (!DeleteImage && ImageFile != null && ImageFile.Length > 0)
+        }
+
+        // If we get here, something went wrong, redisplay the form
+        return View(item);
+    }
+
+    // Update the Edit action to handle image upload/deletion
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,Price,Quantity,ImageUrl")] Item item,
+        IFormFile ImageFile, bool DeleteImage = false)
+    {
+        if (id != item.Id)
+        {
+            return NotFound();
+        }
+
+        var user = await _userManager.GetUserAsync(User);
+
+        // Make sure the item belongs to this store
+        var originalItem = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.StoreId == user.Id);
+        if (originalItem == null)
+        {
+            return NotFound();
+        }
+
+        // Remove validation errors for StoreId and Store
+        ModelState.Remove("StoreId");
+        ModelState.Remove("Store");
+
+        if (ModelState.IsValid)
+        {
+            try
             {
-                // Delete old image if it exists
-                if (!string.IsNullOrEmpty(originalItem.ImageUrl))
+                // Preserve the StoreId (don't let it be changed)
+                item.StoreId = originalItem.StoreId;
+
+                // Handle image changes
+                if (DeleteImage && !string.IsNullOrEmpty(originalItem.ImageUrl))
                 {
-                    var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", 
+                    // Delete the physical file if it exists
+                    var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
                         originalItem.ImageUrl.TrimStart('/'));
                     if (System.IO.File.Exists(oldFilePath))
                     {
                         System.IO.File.Delete(oldFilePath);
                     }
+
+                    // Clear the URL
+                    item.ImageUrl = null;
                 }
-                
-                // Upload new image
-                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(ImageFile.FileName);
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "items", fileName);
-                
-                // Ensure directory exists
-                var directory = Path.GetDirectoryName(filePath);
-                if (!Directory.Exists(directory))
+                else if (!DeleteImage && ImageFile != null && ImageFile.Length > 0)
                 {
-                    Directory.CreateDirectory(directory);
+                    // Delete old image if it exists
+                    if (!string.IsNullOrEmpty(originalItem.ImageUrl))
+                    {
+                        var oldFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot",
+                            originalItem.ImageUrl.TrimStart('/'));
+                        if (System.IO.File.Exists(oldFilePath))
+                        {
+                            System.IO.File.Delete(oldFilePath);
+                        }
+                    }
+
+                    // Upload new image
+                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(ImageFile.FileName);
+                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "items", fileName);
+
+                    // Ensure directory exists
+                    var directory = Path.GetDirectoryName(filePath);
+                    if (!Directory.Exists(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+
+                    // Save the file
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await ImageFile.CopyToAsync(stream);
+                    }
+
+                    // Update the URL
+                    item.ImageUrl = "/uploads/items/" + fileName;
                 }
-                
-                // Save the file
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                else
                 {
-                    await ImageFile.CopyToAsync(stream);
+                    // Keep the existing image URL
+                    item.ImageUrl = originalItem.ImageUrl;
                 }
-                
-                // Update the URL
-                item.ImageUrl = "/uploads/items/" + fileName;
+
+                _context.Entry(originalItem).State = EntityState.Detached;
+                _context.Update(item);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
             }
-            else
+            catch (Exception ex)
             {
-                // Keep the existing image URL
-                item.ImageUrl = originalItem.ImageUrl;
+                Console.WriteLine("Exception: " + ex.Message);
+                ModelState.AddModelError("", "Error updating item: " + ex.Message);
             }
-            
-            _context.Entry(originalItem).State = EntityState.Detached;
-            _context.Update(item);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
         }
-        catch (Exception ex)
+        return View(item);
+    }
+
+    // GET: Store/Delete/5
+    public async Task<IActionResult> Delete(int id)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.StoreId == user.Id);
+
+        if (item == null)
         {
-            Console.WriteLine("Exception: " + ex.Message);
-            ModelState.AddModelError("", "Error updating item: " + ex.Message);
+            return NotFound();
         }
-    }
-    return View(item);
-}
 
-// GET: Store/Delete/5
-public async Task<IActionResult> Delete(int id)
-{
-    var user = await _userManager.GetUserAsync(User);
-    var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.StoreId == user.Id);
-    
-    if (item == null)
+        return View(item);
+    }
+
+    // POST: Store/Delete/5
+    [HttpPost, ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
     {
-        return NotFound();
+        var user = await _userManager.GetUserAsync(User);
+        var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.StoreId == user.Id);
+
+        if (item == null)
+        {
+            return NotFound();
+        }
+
+        _context.Items.Remove(item);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
     }
-    
-    return View(item);
-}
 
-// POST: Store/Delete/5
-[HttpPost, ActionName("Delete")]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> DeleteConfirmed(int id)
-{
-    var user = await _userManager.GetUserAsync(User);
-    var item = await _context.Items.FirstOrDefaultAsync(i => i.Id == id && i.StoreId == user.Id);
-    
-    if (item == null)
-    {
-        return NotFound();
-    }
-    
-    _context.Items.Remove(item);
-    await _context.SaveChangesAsync();
-    return RedirectToAction(nameof(Index));
-}
-
-// GET: Store orders containing this store's items
-public async Task<IActionResult> Orders()
-{
-    var user = await _userManager.GetUserAsync(User);
-    
-    // Get all orders that contain items from this store
-    var orders = await _context.Orders
-        .Include(o => o.OrderItems)
-            .ThenInclude(oi => oi.Item)
-        .Include(o => o.Customer)
-        .Where(o => o.OrderItems.Any(oi => oi.Item.StoreId == user.Id))
-        .OrderByDescending(o => o.CreatedAt)
-        .ToListAsync();
-
-    ViewBag.CurrentUserId = user.Id;
-    return View(orders);
-}
+    // Remove these methods as they're now handled in AccountController:
+    // - Orders()
+    // - UpdateOrderStatus()
 }
