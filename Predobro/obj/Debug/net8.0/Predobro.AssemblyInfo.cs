@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Predobro")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c2b555d35090607a030c4eb5750452ada4827490")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+40f9839bf5716424c48c42567d3debac82777ed5")]
 [assembly: System.Reflection.AssemblyProductAttribute("Predobro")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Predobro")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
