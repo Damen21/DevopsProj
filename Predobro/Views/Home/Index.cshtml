@@ -1,55 +1,172 @@
 ﻿@model IEnumerable<Predobro.Models.Item>
 
-<h2>Available Food Items</h2>
-
-@if (TempData["Message"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        @TempData["Message"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+@{
+    ViewData["Title"] = "Available Items";
 }
 
-@if (!Model.Any())
-{
-    <p>No items are currently listed.</p>
-}
-else
-{
+<!-- Add Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<div class="container-fluid">
     <div class="row">
-        @foreach (var item in Model)
-        {
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    @if (!string.IsNullOrEmpty(item.ImageUrl))
-                    {
-                        <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" style="height: 200px; object-fit: cover;">
-                    }
-                    else
-                    {
-                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
-                            <span class="text-muted">No image</span>
-                        </div>
-                    }
-                    <div class="card-body">
-                        <h5 class="card-title">@item.Name</h5>
-                        <p class="card-text">@item.Description</p>
-                        <p class="card-text"><strong>Price:</strong> @item.Price.ToString("C")</p>
-                        <p class="card-text"><strong>Available:</strong> @item.Quantity</p>
-                        @if (User.IsInRole("Customer") && item.Quantity > 0)
-                        {
-                            <form asp-controller="Order" asp-action="AddToCart" method="post">
-                                <input type="hidden" name="itemId" value="@item.Id" />
-                                <button type="submit" class="btn btn-primary">Add to Cart</button>
-                            </form>
-                        }
-                        else if (User.IsInRole("Customer") && item.Quantity == 0)
-                        {
-                            <span class="text-danger">Out of stock</span>
-                        }
-                    </div>
+        <!-- Map Column -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Store Locations in Ljubljana</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map" style="height: 600px; width: 100%;"></div>
                 </div>
             </div>
-        }
+        </div>
+        
+        <!-- Items Column -->
+        <div class="col-md-8">
+            <h2>Available Items</h2>
+            
+            @if (Model.Any())
+            {
+                <div class="row">
+                    @foreach (var item in Model)
+                    {
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100">
+                                @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                {
+                                    <img src="@item.ImageUrl" class="card-img-top" alt="@item.Name" style="height: 200px; object-fit: cover;">
+                                }
+                                else
+                                {
+                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <span class="text-muted">No Image</span>
+                                    </div>
+                                }
+                                
+                                <div class="card-body">
+                                    <h5 class="card-title">@item.Name</h5>
+                                    <p class="card-text">@item.Description</p>
+                                    <p class="card-text"><strong>Price:</strong> @item.Price.ToString("C")</p>
+                                    <p class="card-text"><strong>Available:</strong> @item.Quantity</p>
+                                    <p class="card-text">
+                                        <strong>Store:</strong> @item.Store.FullName<br>
+                                        <strong>Address:</strong> <span class="store-address" data-store-id="@item.Store.Id">@item.Store.Address</span>
+                                    </p>
+                                    @if (User.IsInRole("Customer") && item.Quantity > 0)
+                                    {
+                                        <form asp-controller="Order" asp-action="AddToCart" method="post">
+                                            <input type="hidden" name="itemId" value="@item.Id" />
+                                            <button type="submit" class="btn btn-primary">Add to Cart</button>
+                                        </form>
+                                    }
+                                    else if (User.IsInRole("Customer") && item.Quantity == 0)
+                                    {
+                                        <span class="text-danger">Out of stock</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <h4>No items available</h4>
+                    <p>There are currently no items available for purchase.</p>
+                </div>
+            }
+        </div>
     </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the map centered on Ljubljana
+    var map = L.map('map').setView([46.0569, 14.5058], 12);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Store locations from the server
+    var stores = @Html.Raw(Json.Serialize(ViewBag.StoresWithCoordinates));
+    
+    // Add markers for each store
+    stores.forEach(function(storeData) {
+        var marker = L.marker([storeData.latitude, storeData.longitude]).addTo(map);
+        
+        // Create popup content
+        var popupContent = `
+            <div>
+                <h6>${storeData.store.fullName}</h6>
+                <p><strong>Address:</strong> ${storeData.store.address}</p>
+                <p><strong>Items Available:</strong> ${storeData.items.length}</p>
+                <hr>
+                <small>Items:</small>
+                <ul style="margin: 0; padding-left: 15px;">
+                    ${storeData.items.slice(0, 3).map(item => `<li>${item.name} - ${item.price.toFixed(2)}€</li>`).join('')}
+                    ${storeData.items.length > 3 ? `<li><em>... and ${storeData.items.length - 3} more</em></li>` : ''}
+                </ul>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+        
+        // Add click event to highlight corresponding store addresses
+        marker.on('click', function() {
+            // Remove previous highlighting
+            document.querySelectorAll('.store-address').forEach(el => {
+                el.style.backgroundColor = '';
+                el.style.padding = '';
+            });
+            
+            // Highlight this store's addresses
+            document.querySelectorAll(`[data-store-id="${storeData.store.id}"]`).forEach(el => {
+                el.style.backgroundColor = '#fff3cd';
+                el.style.padding = '2px 4px';
+                el.style.borderRadius = '3px';
+            });
+        });
+    });
+    
+    // Add click event to address spans to highlight map markers
+    document.querySelectorAll('.store-address').forEach(function(addressEl) {
+        addressEl.style.cursor = 'pointer';
+        addressEl.addEventListener('click', function() {
+            var storeId = this.getAttribute('data-store-id');
+            var storeData = stores.find(s => s.store.id === storeId);
+            
+            if (storeData) {
+                // Pan to the store location
+                map.setView([storeData.latitude, storeData.longitude], 15);
+                
+                // Find and open the popup for this store
+                map.eachLayer(function(layer) {
+                    if (layer instanceof L.Marker) {
+                        var pos = layer.getLatLng();
+                        if (Math.abs(pos.lat - storeData.latitude) < 0.0001 && 
+                            Math.abs(pos.lng - storeData.longitude) < 0.0001) {
+                            layer.openPopup();
+                        }
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.store-address:hover {
+    text-decoration: underline;
+    color: #0066cc;
 }
+
+.leaflet-popup-content {
+    margin: 8px 12px;
+    line-height: 1.4;
+}
+</style>

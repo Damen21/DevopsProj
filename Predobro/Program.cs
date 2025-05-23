@@ -27,6 +27,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages(); // <-- Add this line
 
 builder.Services.AddTransient<IEmailSender, NoOpEmailSender>();
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 // Seed roles

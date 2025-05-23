@@ -187,10 +187,6 @@ else if (User.IsInRole("Store"))
                                 <small class="text-muted">
                                     <strong>Your items total:</strong> $@myItems.Sum(oi => oi.Item.Price * oi.Quantity).ToString("F2")
                                 </small>
-                                <div class="mt-2">
-                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id" 
-                                       class="btn btn-outline-primary btn-sm">View Full Order</a>
-                                </div>
                             </div>
                         </div>
                     </div>

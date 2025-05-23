@@ -48,12 +48,17 @@ else
                             </td>
                             <td>@item.Item.Price.ToString("C")</td>
                             <td>
-                                <form asp-action="UpdateCartItem" method="post" class="d-flex align-items-center">
-                                    <input type="hidden" name="orderItemId" value="@item.Id" />
-                                    <input type="number" name="quantity" value="@item.Quantity" min="1" 
-                                           class="form-control form-control-sm" style="width: 70px;" />
-                                    <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Update</button>
-                                </form>
+                                <div class="d-flex align-items-center">
+                                    <input type="number" 
+                                           data-orderitem-id="@item.Id" 
+                                           value="@item.Quantity" 
+                                           min="1" 
+                                           class="form-control form-control-sm auto-update-qty" 
+                                           style="width: 70px;" />
+                                    <div class="spinner-border spinner-border-sm ms-2 d-none" role="status" id="spinner-@item.Id">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
                             </td>
                             <td>@((item.Item.Price * item.Quantity).ToString("C"))</td>
                             <td>
@@ -82,4 +87,79 @@ else
             <button type="submit" class="btn btn-success">Checkout</button>
         </form>
     </div>
+    
+    <!-- Add form for AJAX update -->
+    <form id="update-form" asp-action="UpdateCartItem" method="post" class="d-none">
+        <input type="hidden" id="update-orderitem-id" name="orderItemId" value="" />
+        <input type="hidden" id="update-quantity" name="quantity" value="" />
+    </form>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const debounce = (func, delay) => {
+                let debounceTimer;
+                return function() {
+                    const context = this;
+                    const args = arguments;
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => func.apply(context, args), delay);
+                };
+            };
+            
+            const updateQuantity = debounce(function(input) {
+                const orderItemId = input.dataset.orderitemId;
+                const quantity = input.value;
+                
+                if (quantity <= 0) {
+                    input.value = 1;
+                    return;
+                }
+                
+                // Show spinner
+                const spinner = document.getElementById(`spinner-${orderItemId}`);
+                spinner.classList.remove('d-none');
+                
+                // Set form values
+                document.getElementById('update-orderitem-id').value = orderItemId;
+                document.getElementById('update-quantity').value = quantity;
+                
+                // Submit form with fetch API
+                const form = document.getElementById('update-form');
+                const formData = new FormData(form);
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        // Hide spinner if no redirect
+                        spinner.classList.add('d-none');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    spinner.classList.add('d-none');
+                });
+            }, 500);
+            
+            // Add event listeners to all quantity inputs
+            document.querySelectorAll('.auto-update-qty').forEach(input => {
+                input.addEventListener('change', function() {
+                    updateQuantity(this);
+                });
+                
+                input.addEventListener('input', function() {
+                    updateQuantity(this);
+                });
+            });
+        });
+    </script>
 }
