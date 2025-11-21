@@ -24,6 +24,11 @@ namespace Predobro.Data
             modelBuilder.Entity<Order>().ToTable("Orders");
             modelBuilder.Entity<OrderItem>().ToTable("OrderItems");
 
+            // Configure decimal precision for Item.Price
+            modelBuilder.Entity<Item>()
+                .Property(i => i.Price)
+                .HasPrecision(18, 2); // 18 digits total, 2 decimal places
+
             // Prevent cascade delete between Order and OrderItem
             modelBuilder.Entity<OrderItem>()
                 .HasOne(oi => oi.Order)
